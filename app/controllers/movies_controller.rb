@@ -11,7 +11,31 @@ class MoviesController < ApplicationController
   end
 
   def index
-    @movies = Movie.all
+    @all_ratings = Movie.ratings
+    @actual_ratings = Hash.new
+    
+    if params.has_key?(:ratings)
+      key_list = params[:ratings].keys
+      ratingList = Array.new
+      for key in key_list do
+          @actual_ratings[key] = true
+          ary = [key]
+          ratingList.concat(ary)
+      end
+      @all_ratings.each do |r|
+        if !@actual_ratings.has_key?(r)
+          @actual_ratings[r] = false
+        end
+      end
+    else
+      ratingList = Movie.ratings
+      @all_ratings.each do |r|
+        @actual_ratings[r] = true
+      end
+    end
+    
+    @movies = Movie.with_ratings(ratingList)
+    
     if params[:sort] == 'date'
       @movies = @movies.order(:release_date)
       @release_date_header = 'hilite'
@@ -48,5 +72,5 @@ class MoviesController < ApplicationController
     flash[:notice] = "Movie '#{@movie.title}' deleted."
     redirect_to movies_path
   end
-
+  
 end
