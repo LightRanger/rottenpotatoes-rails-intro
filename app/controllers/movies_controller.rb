@@ -13,6 +13,20 @@ class MoviesController < ApplicationController
   def index
     @all_ratings = Movie.ratings
     @actual_ratings = Hash.new
+    redirectRatings = false;
+    redirectSort = false;
+    
+    allRatings = Hash.new
+    @all_ratings.each do |r|
+      allRatings[r] = true
+    end
+    
+    if (session[:ratings] != nil && session[:ratings] != allRatings && params[:ratings] == nil)
+      redirectRatings = true;
+    end
+    
+    session[:ratings] ||= allRatings
+    params[:ratings] ||= session[:ratings]
     
     if params.has_key?(:ratings)
       key_list = params[:ratings].keys
@@ -22,27 +36,44 @@ class MoviesController < ApplicationController
           ary = [key]
           ratingList.concat(ary)
       end
+      
+      if key_list == nil
+        params[:ratings] = session[:ratings]
+        @actual_ratings = params[:ratings]
+      end
+      
       @all_ratings.each do |r|
-        if !@actual_ratings.has_key?(r)
+        if !params[:ratings].has_key?(r)
           @actual_ratings[r] = false
         end
       end
-    else
-      ratingList = Movie.ratings
-      @all_ratings.each do |r|
-        @actual_ratings[r] = true
-      end
     end
     
+    session[:ratings] = params[:ratings]
+    
     @movies = Movie.with_ratings(ratingList)
+    
+    if  (session[:sort] != nil && params[:sort] == nil)
+      redirectSort = true;
+    end
+    
+    session[:sort] ||= 'title'
+    params[:sort] ||= session[:sort]
     
     if params[:sort] == 'date'
       @movies = @movies.order(:release_date)
       @release_date_header = 'hilite'
-    else
+      session[:sort] = 'date'
+    elsif params[:sort] == 'title'
       @movies = @movies.order(:title)
       @title_header = 'hilite'
+      session[:sort] = 'title'
     end
+    
+    if redirectRatings or redirectSort
+      redirect_to movies_path(params) and return
+    end
+    
   end
 
   def new
